@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using TestHelper;
 using DiConstructorGenerator;
 using System.Linq;
 using Microsoft.CodeAnalysis.CodeActions;
@@ -14,7 +13,7 @@ using Microsoft.CodeAnalysis.Text;
 namespace DiConstructorGenerator.Test
 {
     [TestClass]
-    public class UnitTest : CodeFixVerifier
+    public class UnitTest
     {
 
         //No diagnostics expected to show up
