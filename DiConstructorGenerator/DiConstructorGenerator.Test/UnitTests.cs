@@ -1,28 +1,19 @@
 ﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using DiConstructorGenerator;
 using System.Linq;
-using Microsoft.CodeAnalysis.CodeActions;
-using System.Threading;
-using System.Collections.Immutable;
-using Microsoft.CodeAnalysis.Text;
 
 namespace DiConstructorGenerator.Test
 {
     [TestClass]
     public class UnitTest
     {
-
-        //No diagnostics expected to show up
+        //No refactoring
         [TestMethod]
         public void TestMethod1()
         {
             var testClassFileContents = @" ";
 
-            TestUtil.TestClass(
+            TestUtil.TestAsertingRefactorings(
                 testClassFileContents,
                 " ",
                 (workspace, document, proposedCodeRefactorings) =>
@@ -49,27 +40,10 @@ public class raBooF
 {
 }";
 
-            TestUtil.TestClass(
-                testClassFileContents,
-                "FooBar",
-                (workspace, document, proposedCodeRefactorings) =>
-                {
-                    CodeAction refactoring = proposedCodeRefactorings.Single();
-                    CodeActionOperation operation = refactoring
-                                        .GetOperationsAsync(CancellationToken.None)
-                                        .Result
-                                        .Single();
-
-                    operation.Apply(workspace, CancellationToken.None);
-
-                    Document newDocument = workspace.CurrentSolution.GetDocument(document.Id);
-
-                    SourceText newText = newDocument.GetTextAsync(CancellationToken.None).Result;
-
-                    string text = newText.ToString();
-
-                    Assert.AreEqual(text, testClassExpectedNewContents);
-                });
+            TestUtil.TestAssertingEndText(
+                            testClassFileContents,
+                            "FooBar",
+                            testClassExpectedNewContents);
         }
     }
 }

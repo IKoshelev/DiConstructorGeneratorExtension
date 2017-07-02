@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,8 +20,37 @@ namespace DiConstructorGenerator.Test
                             "ClassLibraryProjecForAdhocWorkspaceForUnitTest";
         public static string ClassFileName { get; set; } = 
                             "ClassForDiagnosticsTest";
+
+        public static void TestAssertingEndText(
+                                    string sampleClassCode,
+                                    string refactoringSite,
+                                    string resultingClassCode,
+                                    int refactoringNumber = 0)
+        {
+            TestAsertingRefactorings(
+                sampleClassCode,
+                refactoringSite,
+                (workspace, document, proposedCodeRefactorings) =>
+                {
+                    CodeAction refactoring = proposedCodeRefactorings.Single();
+                    CodeActionOperation operation = refactoring
+                                        .GetOperationsAsync(CancellationToken.None)
+                                        .Result
+                                        .ElementAt(refactoringNumber);
+
+                    operation.Apply(workspace, CancellationToken.None);
+
+                    Document newDocument = workspace.CurrentSolution.GetDocument(document.Id);
+
+                    SourceText newText = newDocument.GetTextAsync(CancellationToken.None).Result;
+
+                    string text = newText.ToString();
+
+                    Assert.AreEqual(text, resultingClassCode);
+                });
+        }
         
-        public static void TestClass(
+        public static void TestAsertingRefactorings(
                                     string sampleClassCode, 
                                     string refactoringSite,
                                     Action<AdhocWorkspace, 
