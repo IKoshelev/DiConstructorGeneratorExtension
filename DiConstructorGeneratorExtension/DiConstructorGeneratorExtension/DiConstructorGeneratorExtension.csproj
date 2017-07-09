@@ -36,8 +36,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="CodeRefactoringProvider.cs" />
-    <Compile Include="InjectedDependencyAttribute.cs" />
+    <Compile Include="Attributes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RoslynExtension.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

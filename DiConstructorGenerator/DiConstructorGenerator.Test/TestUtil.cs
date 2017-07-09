@@ -113,7 +113,6 @@ namespace DiConstructorGenerator.Test
         public static TextSpan GetTextSpanFromCodeSite(
                                                 string code, 
                                                 string refactoringSite)
-
         {
             var start = code.IndexOf(refactoringSite);
 

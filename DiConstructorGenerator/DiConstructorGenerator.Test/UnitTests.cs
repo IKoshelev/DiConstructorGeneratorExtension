@@ -9,7 +9,7 @@ namespace DiConstructorGenerator.Test
     {
         //No refactoring
         [TestMethod]
-        public void TestMethod1()
+        public void OnEmptyCode_NothingHappens()
         {
             var testClassFileContents = @" ";
 
@@ -31,6 +31,31 @@ using System;
 
 public class FooBar
 {
+}";
+
+            var testClassExpectedNewContents = @"
+using System;
+
+public class raBooF
+{
+}";
+
+            TestUtil.TestAssertingEndText(
+                            testClassFileContents,
+                            "FooBar",
+                            testClassExpectedNewContents);
+        }
+
+        [TestMethod]
+        public void TestMethod3()
+        {
+            var testClassFileContents = @"
+using System;
+
+public class FooBar
+{
+    [InjectedDependencyAttribute, ExcludeFromInjectedDependencies]
+    public readonly int Bar;
 }";
 
             var testClassExpectedNewContents = @"
