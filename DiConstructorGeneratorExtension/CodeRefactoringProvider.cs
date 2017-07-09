@@ -46,58 +46,22 @@ namespace DiConstructorGeneratorExtension
 
         private async Task<Document> RegenerateDependencyInjectedConstructor(
                                     Document document, 
-                                    TypeDeclarationSyntax typeDecl, 
+                                    ClassDeclarationSyntax classDecl, 
                                     CancellationToken cancellationToken)
         {
-            SyntaxKind[] typeDeclarationSyntax = new[]
+            var root = await document.GetSyntaxRootAsync(cancellationToken);
+
+            var @class = root.GetMatchingClassDeclaration(classDecl);
+
+            var hasAllNeededParts = TryGetParts(document, root, @class,
+                out MemberDeclarationSyntax[] injectables,
+                out ConstructorDeclarationSyntax constructor,
+                out Document newDocument);
+
+            if(hasAllNeededParts == false)
             {
-                SyntaxKind.ClassDeclaration,
-                SyntaxKind.StructDeclaration
-            };
-
-            var root = await document.GetSyntaxRootAsync();
-
-            var @type = (ClassDeclarationSyntax)
-                root.DescendantNodes()
-                    .First(n => n.Fits(typeDeclarationSyntax)
-                                && ((ClassDeclarationSyntax)n).Identifier 
-                                                        == typeDecl.Identifier);
-
-            var injectableMembers = GetInjectableMembers(type);
-
-            var constructors =
-               @type.ChildNodes()
-               .Where(n => n.Fits(SyntaxKind.ConstructorDeclaration))
-               .Cast<ConstructorDeclarationSyntax>()
-               .ToArray();
-
-            var count = constructors.Count();
-            if (count > 1)
-            {
-                var errorMessage = "Can't regenerate constructor, type contains multiple constructors.";
-                var explanatoryCommentTrivia = SF.Comment("//" + errorMessage);
-
-                var endOfLineTrivia = SF.EndOfLine("\r\n");
-
-                var typeUpdatedWithExplanatoryComment = @type.WithOpenBraceToken(
-                        SF.Token(
-                            SF.TriviaList(),
-                            SyntaxKind.OpenBraceToken,
-                            SF.TriviaList(
-                                explanatoryCommentTrivia,
-                                endOfLineTrivia)));
-
-                var newDocumentRoot = root.ReplaceNode(@type, typeUpdatedWithExplanatoryComment);
-                var newDocument = document.WithSyntaxRoot(newDocumentRoot);
                 return newDocument;
-
             }
-            else if (count == 0)
-            {
-                return null;
-            }
-
-            var constructor = constructors.FirstOrDefault();
 
             var parameters = constructor.ParameterList
                 .ChildNodes()
@@ -114,25 +78,76 @@ namespace DiConstructorGeneratorExtension
 
             //((SyntaxNode)constructor).ReplaceNode(constructor.ParameterList, updatedParameterList);
 
-
-
             return null;
-            //// Produce a reversed version of the type declaration's identifier token.
-            //var identifierToken = typeDecl.Identifier;
-            //var newName = new string(identifierToken.Text.ToCharArray().Reverse().ToArray());
+        }
 
-            //// Get the symbol representing the type to be renamed.
-            //var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-            //var typeSymbol = semanticModel.GetDeclaredSymbol(typeDecl, cancellationToken);
+        private bool TryGetParts(
+            Document document,
+            SyntaxNode root,
+            ClassDeclarationSyntax @class, 
+            out MemberDeclarationSyntax[] injectables, 
+            out ConstructorDeclarationSyntax constructor,
+            out Document newDocument)
+        {
+            injectables = null;
+            constructor = null;
+            newDocument = null;
 
-            //// Produce a new solution that has all references to that type renamed, including the declaration.
-            //var originalSolution = document.Project.Solution;
-            //var optionSet = originalSolution.Workspace.Options;
-            //var newSolution = await Renamer.RenameSymbolAsync(document.Project.Solution, typeSymbol, newName, optionSet, cancellationToken).ConfigureAwait(false);
+            injectables = GetInjectableMembers(@class);
+            if (injectables.Any() == false)
+            {
+                var errorMessage = "Can't regenerate constructor, no candidate members found " +
+                                    $"(readonly fields, properties markead with {nameof(InjectedDependencyAttribute)})";
+                newDocument = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
+                return false;
+            }
 
-            //// Return the new solution with the now-uppercase type name.
-            //return newSolution;
+            var constructors =
+               @class.ChildNodes()
+                       .Where(n => n.Fits(SyntaxKind.ConstructorDeclaration))
+                       .Cast<ConstructorDeclarationSyntax>()
+                       .ToArray();
 
+            var count = constructors.Count();
+            if (count > 1)
+            {
+                var errorMessage = "Can't regenerate constructor, type contains multiple constructors.";
+                newDocument = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
+                return false;
+            }
+            else if (count == 0)
+            {
+                //todo create new constructor
+                newDocument = null;
+                return false;
+            }
+
+            constructor = constructors.FirstOrDefault();
+
+            return true;
+        }
+
+        private static Document TypeDeclWithCommentAtOpeningBrace(
+                                                        Document document, 
+                                                        SyntaxNode root, 
+                                                        ClassDeclarationSyntax type, 
+                                                        string errorMessage)
+        {
+            var explanatoryCommentTrivia = SF.Comment("//" + errorMessage);
+            var endOfLineTrivia = SF.EndOfLine("\r\n");
+            var leadingTrivia = @type.OpenBraceToken.LeadingTrivia;
+
+            var typeUpdatedWithExplanatoryComment = @type.WithOpenBraceToken(
+                    SF.Token(
+                        leadingTrivia,
+                        SyntaxKind.OpenBraceToken,
+                        SF.TriviaList(
+                            explanatoryCommentTrivia,
+                            endOfLineTrivia)));
+
+            var newDocumentRoot = root.ReplaceNode(@type, typeUpdatedWithExplanatoryComment);
+            var newDocument = document.WithSyntaxRoot(newDocumentRoot);
+            return newDocument;
         }
 
         private static MemberDeclarationSyntax[] GetInjectableMembers(TypeDeclarationSyntax type)

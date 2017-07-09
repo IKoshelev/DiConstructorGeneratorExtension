@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -43,6 +44,16 @@ namespace DiConstructorGeneratorExtension
             };
 
             return attirubteNames.Contains(token.Value);
+        }
+
+        public static ClassDeclarationSyntax GetMatchingClassDeclaration(
+            this SyntaxNode token, 
+            BaseTypeDeclarationSyntax identifierSource)
+        {
+            return (ClassDeclarationSyntax)token.DescendantNodes()
+                .First(n => n.Fits(SyntaxKind.ClassDeclaration)
+                            && ((TypeDeclarationSyntax)n).Identifier
+                                                    == identifierSource.Identifier);
         }
     }
 }

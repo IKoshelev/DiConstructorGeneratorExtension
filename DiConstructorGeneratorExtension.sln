@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26228.9
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiConstructorGeneratorExtension", "DiConstructorGeneratorExtension\DiConstructorGeneratorExtension\DiConstructorGeneratorExtension.csproj", "{AF041FBC-90C7-42DB-888F-9D3AE0BBDACC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiConstructorGeneratorExtension", "DiConstructorGeneratorExtension\DiConstructorGeneratorExtension.csproj", "{AF041FBC-90C7-42DB-888F-9D3AE0BBDACC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiConstructorGeneratorExtension.Vsix", "DiConstructorGeneratorExtension\DiConstructorGeneratorExtension.Vsix\DiConstructorGeneratorExtension.Vsix.csproj", "{E85C1040-5AB5-44D7-9578-B447055566D5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiConstructorGeneratorExtension.Vsix", "DiConstructorGeneratorExtension.Vsix\DiConstructorGeneratorExtension.Vsix.csproj", "{E85C1040-5AB5-44D7-9578-B447055566D5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiConstructorGeneratorExtension.Test", "DiConstructorGenerator\DiConstructorGenerator.Test\DiConstructorGeneratorExtension.Test.csproj", "{DDB0F802-49BF-4275-A081-DFEFB7633CF3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiConstructorGeneratorExtension.Test", "DiConstructorGenerator.Test\DiConstructorGeneratorExtension.Test.csproj", "{DDB0F802-49BF-4275-A081-DFEFB7633CF3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
