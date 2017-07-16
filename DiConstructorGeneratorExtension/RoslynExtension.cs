@@ -55,5 +55,55 @@ namespace DiConstructorGeneratorExtension
                             && ((TypeDeclarationSyntax)n).Identifier
                                                     == identifierSource.Identifier);
         }
+
+        public static SyntaxToken GetMemberIdentifier(this MemberDeclarationSyntax member)
+        {
+            switch (member)
+            {
+                case PropertyDeclarationSyntax prop:
+                    return prop.Identifier;
+                    break;
+                case FieldDeclarationSyntax field:
+                    if(field.Declaration.Variables.Count() != 1)
+                    {
+                        throw new ArgumentException("Encountered injectable field declaration with many " +
+                            "fields inside. This makes no sense for injectable properties.");
+                    }
+                    return field.Declaration.Variables.Single().Identifier;
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown MemberDeclarationSyntax node type : {member.Kind().ToString()}");
+            }
+        }
+
+        public static TypeSyntax GetMemberType(this MemberDeclarationSyntax member)
+        {
+            switch (member)
+            {
+                case PropertyDeclarationSyntax prop:
+                    return prop.Type;
+                    break;
+                case FieldDeclarationSyntax field:
+                    return field.Declaration.Type;
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown MemberDeclarationSyntax node type : {member.Kind().ToString()}");
+            }
+        }
+
+        //public static string GetType(this TypeSyntax member)
+        //{
+        //    switch (member)
+        //    {
+        //        case PredefinedTypeSyntax predefined:
+        //            return predefined.GetText().ToString();
+        //            break;
+        //        case IdentifierNameSyntax name:
+        //            return name.GetText().ToString();
+        //            break;
+        //        default:
+        //            throw new ArgumentException($"Unknown MemberDeclarationSyntax node type : {member.Kind().ToString()}");
+        //    }
+        //}
     }
 }

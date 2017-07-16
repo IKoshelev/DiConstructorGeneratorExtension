@@ -53,7 +53,7 @@ namespace DiConstructorGeneratorExtension
 
             var @class = root.GetMatchingClassDeclaration(classDecl);
 
-            var hasAllNeededParts = TryGetParts(document, root, @class,
+            var hasAllNeededParts = TryGetRequiredParts(document, root, @class,
                 out MemberDeclarationSyntax[] injectables,
                 out ConstructorDeclarationSyntax constructor,
                 out Document newDocument);
@@ -63,31 +63,21 @@ namespace DiConstructorGeneratorExtension
                 return newDocument;
             }
 
-            var parameters = constructor.ParameterList
-                .ChildNodes()
-                .Cast<ParameterSyntax>()
-                .OrderBy(node => ((IdentifierNameSyntax)node.Type).Identifier.ToString())
-                .Select(node => SF.Parameter(
-                    SF.List<AttributeListSyntax>(),
-                    SF.TokenList(),
-                    SF.ParseTypeName(((IdentifierNameSyntax)node.Type).Identifier.Text),
-                    SF.Identifier(node.Identifier.Text),
-                    null));
+            var newConstructor = RegenereateConstructorSyntax(injectables, constructor);
 
-            //var updatedParameterList = SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(parameters));
-
-            //((SyntaxNode)constructor).ReplaceNode(constructor.ParameterList, updatedParameterList);
-
-            return null;
+            var newClass = @class.ReplaceNode(constructor, newConstructor);
+            var newDocumentRoot = root.ReplaceNode(@class, newClass);
+            newDocument = document.WithSyntaxRoot(newDocumentRoot);
+            return newDocument;
         }
 
-        private bool TryGetParts(
-            Document document,
-            SyntaxNode root,
-            ClassDeclarationSyntax @class, 
-            out MemberDeclarationSyntax[] injectables, 
-            out ConstructorDeclarationSyntax constructor,
-            out Document newDocument)
+        private static bool TryGetRequiredParts(
+                                Document document,
+                                SyntaxNode root,
+                                ClassDeclarationSyntax @class, 
+                                out MemberDeclarationSyntax[] injectables, 
+                                out ConstructorDeclarationSyntax constructor,
+                                out Document newDocument)
         {
             injectables = null;
             constructor = null;
@@ -97,21 +87,22 @@ namespace DiConstructorGeneratorExtension
             if (injectables.Any() == false)
             {
                 var errorMessage = "Can't regenerate constructor, no candidate members found " +
-                                    $"(readonly fields, properties markead with {nameof(InjectedDependencyAttribute)})";
+                                    $"(readonly fields, properties markead with {nameof(InjectedDependencyAttribute)}).";
                 newDocument = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
                 return false;
             }
 
-            var constructors =
+            var publicConstructors =
                @class.ChildNodes()
-                       .Where(n => n.Fits(SyntaxKind.ConstructorDeclaration))
+                       .Where(n => n.Fits(SyntaxKind.ConstructorDeclaration) 
+                                    && n.ChildTokens().Any(x => x.Fits(SyntaxKind.PublicKeyword)))
                        .Cast<ConstructorDeclarationSyntax>()
                        .ToArray();
 
-            var count = constructors.Count();
+            var count = publicConstructors.Count();
             if (count > 1)
             {
-                var errorMessage = "Can't regenerate constructor, type contains multiple constructors.";
+                var errorMessage = "Can't regenerate constructor, type contains multiple public constructors.";
                 newDocument = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
                 return false;
             }
@@ -122,7 +113,7 @@ namespace DiConstructorGeneratorExtension
                 return false;
             }
 
-            constructor = constructors.FirstOrDefault();
+            constructor = publicConstructors.FirstOrDefault();
 
             return true;
         }
@@ -188,6 +179,158 @@ namespace DiConstructorGeneratorExtension
                     .ToArray();
 
             return injectableMembers;
+        }
+
+        private static ParameterSyntax[] GetParametersListWithMissingInjectablesAdded(
+                                                        MemberDeclarationSyntax[] injectables,
+                                                        ConstructorDeclarationSyntax constructor)
+        {
+            Dictionary<TypeSyntax, MemberDeclarationSyntax> injectablesByTypeIdentifier =
+                injectables
+                    .ToDictionary(
+                        x => x.GetMemberType(),
+                        x => x);
+
+            var preexistingParameters =
+                constructor.ParameterList
+                           .ChildNodes()
+                           .Cast<ParameterSyntax>()
+                           .ToArray();
+
+            var preexistingParameterTypes =
+                preexistingParameters
+                    .Select(x => x.Type)
+                    .ToArray();
+
+            var missingParametersByType =
+                injectablesByTypeIdentifier
+                     .Keys
+                     .Where(x => preexistingParameterTypes.Contains(x) == false)
+                     .ToArray();
+
+            var newParamters = missingParametersByType
+                .Select(x =>
+                {
+                    var injectable = injectablesByTypeIdentifier[x];
+                    var injectableIdentifier = injectable.GetMemberIdentifier();
+                    var paramIdentifierName = injectableIdentifier.ValueText;
+
+                    if (paramIdentifierName.StartsWith("_"))
+                    {
+                        paramIdentifierName = paramIdentifierName.Substring(1);
+                    }
+                    else
+                    {
+                        paramIdentifierName = "_" + paramIdentifierName;
+                    }
+                    var parameterIdentifierSyntax = SF.Identifier(paramIdentifierName);
+
+                    return SF.Parameter(
+                             SF.List<AttributeListSyntax>(),
+                             SF.TokenList(),
+                             SF.ParseTypeName(x.GetText().ToString()),
+                             parameterIdentifierSyntax,
+                             null);
+                })
+                .ToArray();
+
+            var combinedNewAndPreexistingParameters =
+                Enumerable.Concat(preexistingParameters, newParamters)
+                            .ToArray();
+
+            return combinedNewAndPreexistingParameters;
+
+        }
+
+        private static ConstructorDeclarationSyntax RegenereateConstructorSyntax(
+                                                        MemberDeclarationSyntax[] injectables,
+                                                        ConstructorDeclarationSyntax constructor)
+        {
+            var updatedParamters = GetParametersListWithMissingInjectablesAdded(
+                                                                                injectables,
+                                                                                constructor);
+
+            var separatedParameters = SF.SeparatedList(updatedParamters);
+
+            constructor = constructor.WithParameterList(SF.ParameterList(separatedParameters));
+
+            string[] existingAssignments = GetExistingAssignmentsInConstructor(constructor);
+
+            var injectablesMissingAnAssignment = injectables.Where(x =>
+            {
+                var name = x.GetMemberIdentifier().Text;
+                return existingAssignments.Contains(name) == false;
+            });
+
+            IEnumerable<StatementSyntax> newBodyStatements = 
+                GetBodyStatementsWithMissinggAssignmentsPrepended(
+                                                            constructor, 
+                                                            updatedParamters, 
+                                                            injectablesMissingAnAssignment);
+
+            var newBodySyntaxList = SF.List(newBodyStatements);
+
+            var newBody = constructor.Body.WithStatements(newBodySyntaxList);
+
+            constructor = constructor.WithBody(newBody);
+
+            return constructor;
+        }
+
+        private static IEnumerable<StatementSyntax> GetBodyStatementsWithMissinggAssignmentsPrepended(ConstructorDeclarationSyntax constructor, ParameterSyntax[] updatedParamters, IEnumerable<MemberDeclarationSyntax> injectablesMissingAnAssignment)
+        {
+            var assignmentStatementsToAdd = injectablesMissingAnAssignment.Select(injectable =>
+            {
+                var injectableTypeIdentifier = (IdentifierNameSyntax)injectable.GetMemberType();
+                var injectableType = injectableTypeIdentifier.Identifier.Text;
+                var injectableName = injectable.GetMemberIdentifier().Text;
+
+                var correspondingParameter = updatedParamters
+                    .SingleOrDefault(parameter =>
+                    {
+                        var paramType = ((IdentifierNameSyntax)parameter.Type).Identifier.Text;
+
+                        return paramType == injectableType;
+                    });
+
+                if (correspondingParameter == null)
+                {
+                    return null;
+                }
+
+                var paramName = correspondingParameter.Identifier.Text;
+
+                return SF.ExpressionStatement(
+                                    SF.AssignmentExpression(
+                                        SyntaxKind.SimpleAssignmentExpression,
+                                        SF.IdentifierName(injectableName),
+                                        SF.IdentifierName(paramName)));
+
+            }).ToArray();
+
+            var newBodyStatements = Enumerable.Concat(
+                                        assignmentStatementsToAdd,
+                                        constructor.Body.Statements);
+            return newBodyStatements;
+        }
+
+        private static string[] GetExistingAssignmentsInConstructor(ConstructorDeclarationSyntax constructor)
+        {
+            return constructor
+                 .Body
+                 .ChildNodes()
+                 .Where(n => n.Fits(SyntaxKind.ExpressionStatement))
+                 .Cast<ExpressionStatementSyntax>()
+                 .Select(x => x.DescendantNodes()
+                                .Where(y => y
+                                            .Fits(SyntaxKind.SimpleAssignmentExpression))
+                                            .SingleOrDefault())
+                 .Where(x => x != null)
+                 .Cast<AssignmentExpressionSyntax>()
+                 .Where(x => x.Left.Fits(SyntaxKind.IdentifierName))
+                 .Select(x => (IdentifierNameSyntax)x.Left)
+                 .Select(x => x.Identifier.Text)
+                 .ToArray();
         }
     }
 }

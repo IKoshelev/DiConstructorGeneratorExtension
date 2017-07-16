@@ -24,7 +24,7 @@ namespace DiConstructorGenerator.Test
         public static void TestAssertingEndText(
                                     string sampleClassCode,
                                     string refactoringSite,
-                                    string resultingClassCode,
+                                    Action<string> assertion,
                                     int refactoringNumber = 0)
         {
             TestAsertingRefactorings(
@@ -46,8 +46,21 @@ namespace DiConstructorGenerator.Test
 
                     string text = newText.ToString();
 
-                    Assert.AreEqual(text, resultingClassCode);
+                    assertion(text);
                 });
+        }
+
+        public static void TestAssertingEndText(
+                                    string sampleClassCode,
+                                    string refactoringSite,
+                                    string expectedText,
+                                    int refactoringNumber = 0)
+        {
+            TestAssertingEndText(
+                sampleClassCode, 
+                refactoringSite, 
+                actuallText => Assert.AreEqual(actuallText, expectedText), 
+                refactoringNumber);
         }
         
         public static void TestAsertingRefactorings(

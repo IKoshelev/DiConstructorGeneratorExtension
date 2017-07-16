@@ -24,7 +24,7 @@ namespace DiConstructorGenerator.Test
         }
 
         [TestMethod]
-        public void TestMethod2()
+        public void IfNoInjectablesNotifiesWithAComment()
         {
             var testClassFileContents = @"
 using System;
@@ -36,8 +36,8 @@ public class FooBar
             var testClassExpectedNewContents = @"
 using System;
 
-public class raBooF
-{
+public class FooBar
+{//Can't regenerate constructor, no candidate members found (readonly fields, properties markead with InjectedDependencyAttribute).
 }";
 
             TestUtil.TestAssertingEndText(
@@ -47,22 +47,91 @@ public class raBooF
         }
 
         [TestMethod]
-        public void TestMethod3()
+        public void IfMultiplePublicConstructorsNotifiesWithAComment()
         {
             var testClassFileContents = @"
 using System;
 
 public class FooBar
 {
-    [InjectedDependencyAttribute, ExcludeFromInjectedDependencies]
-    public readonly int Bar;
+    private readonly FooBar injectMe;
+    public FooBar(){}
+    public FooBar(int a){}
 }";
 
             var testClassExpectedNewContents = @"
 using System;
 
-public class raBooF
+public class FooBar
+{//Can't regenerate constructor, type contains multiple public constructors.
+    private readonly FooBar injectMe;
+    public FooBar(){}
+    public FooBar(int a){}
+}";
+
+            TestUtil.TestAssertingEndText(
+                            testClassFileContents,
+                            "FooBar",
+                            testClassExpectedNewContents);
+        }
+
+
+
+        [TestMethod]
+        public void CanAddSingleParameterInjectionToConstructor()
+        {
+            var testClassFileContents = @"
+using System;
+public class FooBar
 {
+    public readonly FooBar _p1;
+    public FooBar()
+    {
+        
+    }
+}";
+
+            var testClassExpectedNewContents = @"
+using System;
+public class FooBar
+{
+    public readonly FooBar _p1;
+    public FooBar(FooBar p1)
+    {
+        _p1 = p1;
+    }
+}";
+
+            TestUtil.TestAssertingEndText(
+                            testClassFileContents,
+                            "FooBar",
+                            testClassExpectedNewContents);
+        }
+
+
+        [TestMethod]
+        public void CanHandleParametersOfPredefinedTypes()
+        {
+            var testClassFileContents = @"
+using System;
+public class FooBar
+{
+    public readonly FooBar _p1;
+    public FooBar(int a)
+    {
+        
+    }
+}";
+
+            var testClassExpectedNewContents = @"
+using System;
+public class FooBar
+{
+    public readonly FooBar _p1;
+    public FooBar(int a, FooBar p1)
+    {
+        _p1 = p1;
+    }
 }";
 
             TestUtil.TestAssertingEndText(
