@@ -67,7 +67,9 @@ namespace DiConstructorGeneratorExtension
 
             var newConstructor = RegenereateConstructorSyntax(injectables, constructor);
 
+            constructor = GetConstructors(@class).Single();
             var newClass = @class.ReplaceNode(constructor, newConstructor);
+            @class = root.GetMatchingClassDeclaration(classDecl);
             var newDocumentRoot = root.ReplaceNode(@class, newClass);
             document = document.WithSyntaxRoot(newDocumentRoot);
             return document;
@@ -91,13 +93,7 @@ namespace DiConstructorGeneratorExtension
                 document = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
                 return false;
             }
-
-            var publicConstructors =
-               @class.ChildNodes()
-                       .Where(n => n.Fits(SyntaxKind.ConstructorDeclaration) 
-                                    && n.ChildTokens().Any(x => x.Fits(SyntaxKind.PublicKeyword)))
-                       .Cast<ConstructorDeclarationSyntax>()
-                       .ToArray();
+            ConstructorDeclarationSyntax[] publicConstructors = GetConstructors(@class);
 
             var count = publicConstructors.Count();
             if (count > 1)
@@ -108,15 +104,24 @@ namespace DiConstructorGeneratorExtension
             }
             else if (count == 0)
             {
-                (document, root, @class, constructor) = 
-                    TpeDeclarationWithEmptyConstructor(document, root, @class);
+                (document, root, @class, constructor) =
+                    GetTpeDeclarationWithEmptyConstructor(document, root, @class);
                 return true;
             }
             else
             {
                 constructor = publicConstructors.FirstOrDefault();
                 return true;
-            }         
+            }
+        }
+
+        private static ConstructorDeclarationSyntax[] GetConstructors(ClassDeclarationSyntax @class)
+        {
+            return @class.ChildNodes()
+                       .Where(n => n.Fits(SyntaxKind.ConstructorDeclaration)
+                                    && n.ChildTokens().Any(x => x.Fits(SyntaxKind.PublicKeyword)))
+                       .Cast<ConstructorDeclarationSyntax>()
+                       .ToArray();
         }
 
         private static (
@@ -124,7 +129,7 @@ namespace DiConstructorGeneratorExtension
                 SyntaxNode root, 
                 ClassDeclarationSyntax @class, 
                 ConstructorDeclarationSyntax constructor) 
-            TpeDeclarationWithEmptyConstructor(Document document,
+            GetTpeDeclarationWithEmptyConstructor(Document document,
                                                 SyntaxNode root,
                                                 ClassDeclarationSyntax @class)
         {
@@ -142,6 +147,8 @@ namespace DiConstructorGeneratorExtension
             var newClass = @class.AddMembers(newConstructor);
             var newDocumentRoot = root.ReplaceNode(@class, newClass);
             var newDocument = document.WithSyntaxRoot(newDocumentRoot);
+
+            //newConstructor = GetConstructors(newClass).Single();
 
             return (newDocument, newDocumentRoot, newClass, newConstructor);
         }

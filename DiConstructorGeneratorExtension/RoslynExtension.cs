@@ -52,8 +52,8 @@ namespace DiConstructorGeneratorExtension
         {
             return (ClassDeclarationSyntax)token.DescendantNodes()
                 .First(n => n.Fits(SyntaxKind.ClassDeclaration)
-                            && ((TypeDeclarationSyntax)n).Identifier
-                                                    == identifierSource.Identifier);
+                            && ((TypeDeclarationSyntax)n).Identifier.Text
+                                                    == identifierSource.Identifier.Text);
         }
 
         public static string GetMemberName(this MemberDeclarationSyntax member)

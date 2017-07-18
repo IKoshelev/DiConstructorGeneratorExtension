@@ -349,7 +349,7 @@ using System;
 public class FooBar
 {
     public readonly FooBar _p1;
-    public FooBar(FooBar p1)
+public FooBar(FooBar p1)
     {
         _p1 = p1;
     }
