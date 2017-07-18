@@ -56,6 +56,11 @@ namespace DiConstructorGeneratorExtension
                                                     == identifierSource.Identifier);
         }
 
+        public static string GetMemberName(this MemberDeclarationSyntax member)
+        {
+            return member.GetMemberIdentifier().Text;
+        }
+
         public static SyntaxToken GetMemberIdentifier(this MemberDeclarationSyntax member)
         {
             switch (member)
@@ -91,19 +96,19 @@ namespace DiConstructorGeneratorExtension
             }
         }
 
-        //public static string GetType(this TypeSyntax member)
-        //{
-        //    switch (member)
-        //    {
-        //        case PredefinedTypeSyntax predefined:
-        //            return predefined.GetText().ToString();
-        //            break;
-        //        case IdentifierNameSyntax name:
-        //            return name.GetText().ToString();
-        //            break;
-        //        default:
-        //            throw new ArgumentException($"Unknown MemberDeclarationSyntax node type : {member.Kind().ToString()}");
-        //    }
-        //}
+        public static string GetTypeName(this TypeSyntax member)
+        {
+            switch (member)
+            {
+                case PredefinedTypeSyntax predefined:
+                    return predefined.Keyword.Text;
+                    break;
+                case IdentifierNameSyntax name:
+                    return name.Identifier.Text;
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown TypeSyntax node type : {member.Kind().ToString()}");
+            }
+        }
     }
 }

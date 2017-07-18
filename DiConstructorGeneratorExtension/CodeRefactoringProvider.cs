@@ -53,42 +53,42 @@ namespace DiConstructorGeneratorExtension
 
             var @class = root.GetMatchingClassDeclaration(classDecl);
 
-            var hasAllNeededParts = TryGetRequiredParts(document, root, @class,
+            var hasAllNeededParts = TryGetOrAddRequiredParts(
+                ref document,
+                ref root,
+                ref @class,
                 out MemberDeclarationSyntax[] injectables,
-                out ConstructorDeclarationSyntax constructor,
-                out Document newDocument);
+                out ConstructorDeclarationSyntax constructor);
 
             if(hasAllNeededParts == false)
             {
-                return newDocument;
+                return document;
             }
 
             var newConstructor = RegenereateConstructorSyntax(injectables, constructor);
 
             var newClass = @class.ReplaceNode(constructor, newConstructor);
             var newDocumentRoot = root.ReplaceNode(@class, newClass);
-            newDocument = document.WithSyntaxRoot(newDocumentRoot);
-            return newDocument;
+            document = document.WithSyntaxRoot(newDocumentRoot);
+            return document;
         }
 
-        private static bool TryGetRequiredParts(
-                                Document document,
-                                SyntaxNode root,
-                                ClassDeclarationSyntax @class, 
+        private static bool TryGetOrAddRequiredParts(
+                                ref Document document,
+                                ref SyntaxNode root,
+                                ref ClassDeclarationSyntax @class, 
                                 out MemberDeclarationSyntax[] injectables, 
-                                out ConstructorDeclarationSyntax constructor,
-                                out Document newDocument)
+                                out ConstructorDeclarationSyntax constructor)
         {
             injectables = null;
             constructor = null;
-            newDocument = null;
 
             injectables = GetInjectableMembers(@class);
             if (injectables.Any() == false)
             {
                 var errorMessage = "Can't regenerate constructor, no candidate members found " +
                                     $"(readonly fields, properties markead with {nameof(InjectedDependencyAttribute)}).";
-                newDocument = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
+                document = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
                 return false;
             }
 
@@ -103,19 +103,47 @@ namespace DiConstructorGeneratorExtension
             if (count > 1)
             {
                 var errorMessage = "Can't regenerate constructor, type contains multiple public constructors.";
-                newDocument = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
+                document = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
                 return false;
             }
             else if (count == 0)
             {
-                //todo create new constructor
-                newDocument = null;
-                return false;
+                (document, root, @class, constructor) = 
+                    TpeDeclarationWithEmptyConstructor(document, root, @class);
+                return true;
             }
+            else
+            {
+                constructor = publicConstructors.FirstOrDefault();
+                return true;
+            }         
+        }
 
-            constructor = publicConstructors.FirstOrDefault();
+        private static (
+                Document doc, 
+                SyntaxNode root, 
+                ClassDeclarationSyntax @class, 
+                ConstructorDeclarationSyntax constructor) 
+            TpeDeclarationWithEmptyConstructor(Document document,
+                                                SyntaxNode root,
+                                                ClassDeclarationSyntax @class)
+        {
+            var classsName = @class.Identifier.Text;
 
-            return true;
+            var newConstructor = SF.ConstructorDeclaration(
+                    SF.Identifier(classsName))
+                        .WithModifiers(SF.TokenList(
+                            SF.Token(
+                                SF.TriviaList(),
+                                SyntaxKind.PublicKeyword,
+                                SF.TriviaList(SF.Space))))
+                        .WithBody(SF.Block());
+
+            var newClass = @class.AddMembers(newConstructor);
+            var newDocumentRoot = root.ReplaceNode(@class, newClass);
+            var newDocument = document.WithSyntaxRoot(newDocumentRoot);
+
+            return (newDocument, newDocumentRoot, newClass, newConstructor);
         }
 
         private static Document TypeDeclWithCommentAtOpeningBrace(
@@ -183,10 +211,12 @@ namespace DiConstructorGeneratorExtension
 
         private static ParameterSyntax[] GetParametersListWithMissingInjectablesAdded(
                                                         MemberDeclarationSyntax[] injectables,
+                                                        string[] existingConstructorAssignments,
                                                         ConstructorDeclarationSyntax constructor)
         {
-            Dictionary<TypeSyntax, MemberDeclarationSyntax> injectablesByTypeIdentifier =
+            Dictionary<TypeSyntax, MemberDeclarationSyntax> missingInjectablesByTypeIdentifier =
                 injectables
+                    .Where(x => existingConstructorAssignments.Contains(x.GetMemberName()) == false)
                     .ToDictionary(
                         x => x.GetMemberType(),
                         x => x);
@@ -197,21 +227,21 @@ namespace DiConstructorGeneratorExtension
                            .Cast<ParameterSyntax>()
                            .ToArray();
 
-            var preexistingParameterTypes =
+            var preexistingParameterTypeNames =
                 preexistingParameters
-                    .Select(x => x.Type)
+                    .Select(x => x.Type.GetTypeName())
                     .ToArray();
 
             var missingParametersByType =
-                injectablesByTypeIdentifier
+                missingInjectablesByTypeIdentifier
                      .Keys
-                     .Where(x => preexistingParameterTypes.Contains(x) == false)
+                     .Where(x => preexistingParameterTypeNames.Contains(x.GetTypeName()) == false)
                      .ToArray();
 
             var newParamters = missingParametersByType
                 .Select(x =>
                 {
-                    var injectable = injectablesByTypeIdentifier[x];
+                    var injectable = missingInjectablesByTypeIdentifier[x];
                     var injectableIdentifier = injectable.GetMemberIdentifier();
                     var paramIdentifierName = injectableIdentifier.ValueText;
 
@@ -246,15 +276,18 @@ namespace DiConstructorGeneratorExtension
                                                         MemberDeclarationSyntax[] injectables,
                                                         ConstructorDeclarationSyntax constructor)
         {
+            string[] existingAssignments = GetExistingAssignmentsInConstructor(constructor);
+
             var updatedParamters = GetParametersListWithMissingInjectablesAdded(
                                                                                 injectables,
+                                                                                existingAssignments,
                                                                                 constructor);
 
             var separatedParameters = SF.SeparatedList(updatedParamters);
 
             constructor = constructor.WithParameterList(SF.ParameterList(separatedParameters));
 
-            string[] existingAssignments = GetExistingAssignmentsInConstructor(constructor);
+            
 
             var injectablesMissingAnAssignment = injectables.Where(x =>
             {
@@ -277,9 +310,25 @@ namespace DiConstructorGeneratorExtension
             return constructor;
         }
 
-        private static IEnumerable<StatementSyntax> GetBodyStatementsWithMissinggAssignmentsPrepended(ConstructorDeclarationSyntax constructor, ParameterSyntax[] updatedParamters, IEnumerable<MemberDeclarationSyntax> injectablesMissingAnAssignment)
+        private static IEnumerable<StatementSyntax> GetBodyStatementsWithMissinggAssignmentsPrepended(
+                                        ConstructorDeclarationSyntax constructor, 
+                                        ParameterSyntax[] updatedParamters, 
+                                        IEnumerable<MemberDeclarationSyntax> injectablesMissingAnAssignment)
         {
-            var assignmentStatementsToAdd = injectablesMissingAnAssignment.Select(injectable =>
+            ExpressionStatementSyntax[] assignmentStatementsToAdd = 
+                GetMissingAssignmentExpressions(updatedParamters, injectablesMissingAnAssignment);
+
+            var newBodyStatements = Enumerable.Concat(
+                                        assignmentStatementsToAdd,
+                                        constructor.Body.Statements);
+            return newBodyStatements;
+        }
+
+        private static ExpressionStatementSyntax[] GetMissingAssignmentExpressions(
+                                    ParameterSyntax[] updatedParamters, 
+                                    IEnumerable<MemberDeclarationSyntax> injectablesMissingAnAssignment)
+        {
+            return injectablesMissingAnAssignment.Select(injectable =>
             {
                 var injectableTypeIdentifier = (IdentifierNameSyntax)injectable.GetMemberType();
                 var injectableType = injectableTypeIdentifier.Identifier.Text;
@@ -288,7 +337,7 @@ namespace DiConstructorGeneratorExtension
                 var correspondingParameter = updatedParamters
                     .SingleOrDefault(parameter =>
                     {
-                        var paramType = ((IdentifierNameSyntax)parameter.Type).Identifier.Text;
+                        var paramType = parameter.Type.GetTypeName();
 
                         return paramType == injectableType;
                     });
@@ -306,12 +355,9 @@ namespace DiConstructorGeneratorExtension
                                         SF.IdentifierName(injectableName),
                                         SF.IdentifierName(paramName)));
 
-            }).ToArray();
-
-            var newBodyStatements = Enumerable.Concat(
-                                        assignmentStatementsToAdd,
-                                        constructor.Body.Statements);
-            return newBodyStatements;
+            })
+            .Where(x => x != null)
+            .ToArray();
         }
 
         private static string[] GetExistingAssignmentsInConstructor(ConstructorDeclarationSyntax constructor)

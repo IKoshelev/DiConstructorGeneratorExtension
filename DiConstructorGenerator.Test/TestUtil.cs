@@ -59,7 +59,7 @@ namespace DiConstructorGenerator.Test
             TestAssertingEndText(
                 sampleClassCode, 
                 refactoringSite, 
-                actuallText => Assert.AreEqual(actuallText, expectedText), 
+                actuallText => Assert.AreEqual(expectedText, actuallText), 
                 refactoringNumber);
         }
         
