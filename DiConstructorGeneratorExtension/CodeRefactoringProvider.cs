@@ -54,11 +54,11 @@ namespace DiConstructorGeneratorExtension
             var @class = root.GetMatchingClassDeclaration(classDecl);
 
             var hasAllNeededParts = TryGetOrAddRequiredParts(
-                ref document,
-                ref root,
-                ref @class,
-                out MemberDeclarationSyntax[] injectables,
-                out ConstructorDeclarationSyntax constructor);
+                                        ref document,
+                                        ref root,
+                                        ref @class,
+                                        out MemberDeclarationSyntax[] injectables,
+                                        out ConstructorDeclarationSyntax constructor);
 
             if(hasAllNeededParts == false)
             {
@@ -67,7 +67,7 @@ namespace DiConstructorGeneratorExtension
 
             var newConstructor = RegenereateConstructorSyntax(injectables, constructor);
 
-            constructor = GetConstructors(@class).Single();
+            constructor = GetPublicEligableConstructors(@class).Single();
             var newClass = @class.ReplaceNode(constructor, newConstructor);
             @class = root.GetMatchingClassDeclaration(classDecl);
             var newDocumentRoot = root.ReplaceNode(@class, newClass);
@@ -93,7 +93,26 @@ namespace DiConstructorGeneratorExtension
                 document = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
                 return false;
             }
-            ConstructorDeclarationSyntax[] publicConstructors = GetConstructors(@class);
+
+
+            var injectablesWithSameType =
+                injectables.GroupBy(x => x.GetMemberType().GetTypeName())
+                            .FirstOrDefault(x => x.Count() > 1);
+
+            if (injectablesWithSameType != null)
+            {
+                var namesOfOfenders = injectablesWithSameType
+                                            .Select(x => x.GetMemberName());
+                var joinedNamesOfOfenders = string.Join(",", namesOfOfenders);
+
+
+                var errorMessage = $"Can't regenerate constructor, {joinedNamesOfOfenders} " +
+                                    "have the same type (can't generate unique parameter).";
+                document = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
+                return false;
+            }
+
+            ConstructorDeclarationSyntax[] publicConstructors = GetPublicEligableConstructors(@class);
 
             var count = publicConstructors.Count();
             if (count > 1)
@@ -115,13 +134,33 @@ namespace DiConstructorGeneratorExtension
             }
         }
 
-        private static ConstructorDeclarationSyntax[] GetConstructors(ClassDeclarationSyntax @class)
+        private static ConstructorDeclarationSyntax[] GetPublicEligableConstructors(ClassDeclarationSyntax @class)
         {
-            return @class.ChildNodes()
+            var publicConstructors = @class.ChildNodes()
                        .Where(n => n.Fits(SyntaxKind.ConstructorDeclaration)
-                                    && n.ChildTokens().Any(x => x.Fits(SyntaxKind.PublicKeyword)))
-                       .Cast<ConstructorDeclarationSyntax>()
+                                    && n.ChildTokens().Any(x => x.Fits(SyntaxKind.PublicKeyword)));
+
+            var marked = publicConstructors
+                       .Where(n =>
+                       {
+                           var attrMarkerType = typeof(DependencyInjectionConstructorAttribute);
+                           return n
+                                    .GetAttributeIdentifiers()
+                                    .Any(x => x.FitsAttrIdentifier(attrMarkerType));
+
+                       })
                        .ToArray();
+
+            if (marked.Any())
+            {
+                return marked
+                    .Cast<ConstructorDeclarationSyntax>()
+                    .ToArray();
+            }
+
+            return publicConstructors
+                        .Cast<ConstructorDeclarationSyntax>()
+                        .ToArray();
         }
 
         private static (
@@ -367,7 +406,8 @@ namespace DiConstructorGeneratorExtension
             .ToArray();
         }
 
-        private static string[] GetExistingAssignmentsInConstructor(ConstructorDeclarationSyntax constructor)
+        private static string[] GetExistingAssignmentsInConstructor(
+                                            ConstructorDeclarationSyntax constructor)
         {
             return constructor
                  .Body

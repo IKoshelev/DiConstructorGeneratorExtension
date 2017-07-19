@@ -24,7 +24,7 @@ namespace DiConstructorGenerator.Test
         }
 
         [TestMethod]
-        public void IfNoInjectablesNotifiesWithAComment()
+        public void IfNoInjectablesNotifiesErrorWithAComment()
         {
             var testClassFileContents = @"
 using System;
@@ -47,7 +47,7 @@ public class FooBar
         }
 
         [TestMethod]
-        public void IfMultiplePublicConstructorsNotifiesWithAComment()
+        public void IfMultiplePublicConstructorsNotifiesErrorWithAComment()
         {
             var testClassFileContents = @"
 using System;
@@ -74,8 +74,6 @@ public class FooBar
                             "FooBar",
                             testClassExpectedNewContents);
         }
-
-
 
         [TestMethod]
         public void CanAddSingleParameterInjectionToConstructor()
@@ -355,6 +353,67 @@ public FooBar(FooBar p1)
     }
 }
 public class Baz{}";
+
+            TestUtil.TestAssertingEndText(
+                            testClassFileContents,
+                            "FooBar",
+                            testClassExpectedNewContents);
+        }
+
+        [TestMethod]
+        public void CantCreateConstuctorIfTwoInjectablesHaveTheSameTypeAndNotifesErrorWithAComment()
+        {
+            var testClassFileContents = @"
+using System;
+public class FooBar
+{
+    public readonly FooBar _p1;
+    public readonly FooBar _p2;
+}";
+
+            var testClassExpectedNewContents = @"
+using System;
+public class FooBar
+{//Can't regenerate constructor, _p1,_p2 have the same type (can't generate unique parameter).
+    public readonly FooBar _p1;
+    public readonly FooBar _p2;
+}";
+
+            TestUtil.TestAssertingEndText(
+                            testClassFileContents,
+                            "FooBar",
+                            testClassExpectedNewContents);
+        }
+
+        [TestMethod]
+        public void UserCanMarkConstructorToBeUsed()
+        {
+            var testClassFileContents = @"
+using System;
+
+public class FooBar
+{
+    private readonly FooBar injectMe;
+    public FooBar(){}
+    [DependencyInjectionConstructor]
+    public FooBar(int a):this()
+    {
+    }
+}";
+
+            var testClassExpectedNewContents = @"
+using System;
+
+public class FooBar
+{
+    private readonly FooBar injectMe;
+    public FooBar(){}
+    [DependencyInjectionConstructor]
+    public FooBar(int a, FooBar _injectMe) : this()
+    {
+        injectMe = _injectMe;
+    }
+}";
 
             TestUtil.TestAssertingEndText(
                             testClassFileContents,
