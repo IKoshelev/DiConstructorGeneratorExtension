@@ -38,13 +38,18 @@ namespace DiConstructorGeneratorExtension
                 case ClassDeclarationSyntax @class:
                     classDecl = @class;
                     break;
+                case ConstructorDeclarationSyntax @constructor 
+                     when @constructor.Parent is ClassDeclarationSyntax @class:
+                    constructorDecl = @constructor;
+                    classDecl = @class;
+                    break;
                 default:
                     return;
                     break;
             } 
                 
             var action = CodeAction.Create("(Re)Generate dependency injected constructor",
-                cancelToken => RegenerateDependencyInjectedConstructor(context.Document, classDecl, cancelToken));
+                cancelToken => RegenerateDependencyInjectedConstructor(context.Document, classDecl, constructorDecl, cancelToken));
 
             // Register this code action.
             context.RegisterRefactoring(action);
@@ -52,19 +57,22 @@ namespace DiConstructorGeneratorExtension
 
         private async Task<Document> RegenerateDependencyInjectedConstructor(
                                     Document document, 
-                                    ClassDeclarationSyntax classDecl, 
+                                    ClassDeclarationSyntax classDecl,
+                                    ConstructorDeclarationSyntax constrDecl,
                                     CancellationToken cancellationToken)
         {
             var root = await document.GetSyntaxRootAsync(cancellationToken);
 
             var @class = root.GetMatchingClassDeclaration(classDecl);
 
+            var constructor = constrDecl;
+
             var hasAllNeededParts = TryGetOrAddRequiredParts(
                                         ref document,
                                         ref root,
                                         ref @class,
-                                        out MemberDeclarationSyntax[] injectables,
-                                        out ConstructorDeclarationSyntax constructor);
+                                        ref constructor,
+                                        out MemberDeclarationSyntax[] injectables);
 
             if(hasAllNeededParts == false)
             {
@@ -73,8 +81,8 @@ namespace DiConstructorGeneratorExtension
 
             var newConstructor = RegenereateConstructorSyntax(injectables, constructor);
 
-            constructor = GetPublicEligableConstructors(@class).Single();
-            var newClass = @class.ReplaceNode(constructor, newConstructor);
+            var constructorToReplace = constrDecl ?? GetPublicEligableConstructors(@class).Single();
+            var newClass = @class.ReplaceNode(constructorToReplace, newConstructor);
             @class = root.GetMatchingClassDeclaration(classDecl);
             var newDocumentRoot = root.ReplaceNode(@class, newClass);
             document = document.WithSyntaxRoot(newDocumentRoot);
@@ -84,22 +92,21 @@ namespace DiConstructorGeneratorExtension
         private static bool TryGetOrAddRequiredParts(
                                 ref Document document,
                                 ref SyntaxNode root,
-                                ref ClassDeclarationSyntax @class, 
-                                out MemberDeclarationSyntax[] injectables, 
-                                out ConstructorDeclarationSyntax constructor)
+                                ref ClassDeclarationSyntax @class,
+                                ref ConstructorDeclarationSyntax constructor,
+                                out MemberDeclarationSyntax[] injectables)
         {
+           
             injectables = null;
-            constructor = null;
 
             injectables = GetInjectableMembers(@class);
             if (injectables.Any() == false)
             {
                 var errorMessage = "Can't regenerate constructor, no candidate members found " +
                                     $"(readonly fields, properties markead with {nameof(InjectedDependencyAttribute)}).";
-                document = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
+                document = NotifyErrorViaCommentToClassOrConstructor(document, root, @class, constructor, errorMessage);
                 return false;
             }
-
 
             var injectablesWithSameType =
                 injectables.GroupBy(x => x.GetMemberType().GetTypeName())
@@ -109,25 +116,33 @@ namespace DiConstructorGeneratorExtension
             {
                 var namesOfOfenders = injectablesWithSameType
                                             .Select(x => x.GetMemberName());
-                var joinedNamesOfOfenders = string.Join(",", namesOfOfenders);
 
+                var joinedNamesOfOfenders = string.Join(",", namesOfOfenders);
 
                 var errorMessage = $"Can't regenerate constructor, {joinedNamesOfOfenders} " +
                                     "have the same type (can't generate unique parameter).";
-                document = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
+
+                document = NotifyErrorViaCommentToClassOrConstructor(document, root, @class, constructor, errorMessage);
                 return false;
+            }
+
+            if (constructor != null)
+            {
+                // a constructor was already chosen
+                return true;
             }
 
             ConstructorDeclarationSyntax[] publicConstructors = GetPublicEligableConstructors(@class);
 
-            var count = publicConstructors.Count();
-            if (count > 1)
+            var constructorsCount = publicConstructors.Count();
+
+            if (constructorsCount > 1)
             {
                 var errorMessage = "Can't regenerate constructor, type contains multiple public constructors.";
-                document = TypeDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
+                document = NotifyErrorViaCommentToClassOrConstructor(document, root, @class, constructor, errorMessage);
                 return false;
             }
-            else if (count == 0)
+            else if (constructorsCount == 0)
             {
                 (document, root, @class, constructor) =
                     GetTypeDeclarationWithEmptyConstructor(document, root, @class, injectables);
@@ -210,7 +225,21 @@ namespace DiConstructorGeneratorExtension
             return (newDocument, newDocumentRoot, newClass, newConstructor);
         }
 
-        private static Document TypeDeclWithCommentAtOpeningBrace(
+        private static Document NotifyErrorViaCommentToClassOrConstructor(
+                                         Document document,
+                                         SyntaxNode root,
+                                         ClassDeclarationSyntax @class,
+                                         ConstructorDeclarationSyntax constructor,
+                                         string errorMessage)
+        {
+            if(constructor != null)
+            {
+                return ConstructorWithCommentPrepended(document, root, @class, constructor, errorMessage);
+            }
+            return ClassDeclWithCommentAtOpeningBrace(document, root, @class, errorMessage);
+        }
+
+        private static Document ClassDeclWithCommentAtOpeningBrace(
                                                         Document document, 
                                                         SyntaxNode root, 
                                                         ClassDeclarationSyntax type, 
@@ -229,6 +258,26 @@ namespace DiConstructorGeneratorExtension
                             endOfLineTrivia)));
 
             var newDocumentRoot = root.ReplaceNode(@type, typeUpdatedWithExplanatoryComment);
+            var newDocument = document.WithSyntaxRoot(newDocumentRoot);
+            return newDocument;
+        }
+
+        private static Document ConstructorWithCommentPrepended(
+                                                 Document document,
+                                                 SyntaxNode root,
+                                                 ClassDeclarationSyntax @class,
+                                                 ConstructorDeclarationSyntax constructor,
+                                                 string errorMessage)
+        {
+            var commentWithEndOfLine = new[] {SF.Comment("//" + errorMessage)};
+            var existingLeadingTrivia = constructor.GetLeadingTrivia();
+            var combinedTrivia = SF.TriviaList(
+                Enumerable.Concat(commentWithEndOfLine, existingLeadingTrivia));
+
+            var constructorWithNewLeadingTrivia = constructor.WithLeadingTrivia(combinedTrivia);
+
+            var newClass = @class.ReplaceNode(constructor, constructorWithNewLeadingTrivia);
+            var newDocumentRoot = root.ReplaceNode(@class, newClass);
             var newDocument = document.WithSyntaxRoot(newDocumentRoot);
             return newDocument;
         }

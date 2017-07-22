@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
 
@@ -15,7 +16,7 @@ namespace DiConstructorGenerator.Test
 
             TestUtil.TestAsertingRefactorings(
                 testClassFileContents,
-                " ",
+                new TextSpan(0,1),
                 (workspace, document, proposedCodeRefactorings) =>
                 {
                     var len = proposedCodeRefactorings.Count();
@@ -481,6 +482,74 @@ IFoo<IFoo<Interface2>> _injectMe)
             TestUtil.TestAssertingEndText(
                             testClassFileContents,
                             "FooBar",
+                            testClassExpectedNewContents);
+        }
+
+        [TestMethod]
+        public void CanChooseConstructorDirectlyByClickingOnIt()
+        {
+            var testClassFileContents = @"
+using System;
+
+public class FooBar
+{
+    private readonly FooBar injectMe;
+    public FooBar(){}
+    public /*START*/FooBar/*END*/ (int a):this()
+    {
+    }
+}";
+
+            var testClassExpectedNewContents = @"
+using System;
+
+public class FooBar
+{
+    private readonly FooBar injectMe;
+    public FooBar(){}
+    public /*START*/FooBar/*END*/ (int a,
+FooBar _injectMe) : this()
+    {
+        injectMe = _injectMe;
+    }
+}";
+
+            TestUtil.TestAssertingEndText(
+                            testClassFileContents,
+                            testClassExpectedNewContents);
+        }
+
+        [TestMethod]
+        public void WhenConstructorIsChosenDirectlyErrorCommentsArePrepandedToIt()
+        {
+            var testClassFileContents = @"
+using System;
+
+public class FooBar
+{
+    private readonly FooBar injectMe1;
+    private readonly FooBar injectMe2;
+    public FooBar(){}
+    public /*START*/FooBar/*END*/ (int a):this()
+    {
+    }
+}";
+
+            var testClassExpectedNewContents = @"
+using System;
+
+public class FooBar
+{
+    private readonly FooBar injectMe1;
+    private readonly FooBar injectMe2;
+    public FooBar(){}
+//Can't regenerate constructor, injectMe1,injectMe2 have the same type (can't generate unique parameter).    public /*START*/FooBar/*END*/ (int a):this()
+    {
+    }
+}";
+
+            TestUtil.TestAssertingEndText(
+                            testClassFileContents,
                             testClassExpectedNewContents);
         }
     }

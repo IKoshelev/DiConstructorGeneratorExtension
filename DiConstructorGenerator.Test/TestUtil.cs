@@ -28,9 +28,20 @@ namespace DiConstructorGenerator.Test
                                     Action<string> assertion,
                                     int refactoringNumber = 0)
         {
+            TextSpan refactoringSiteTextSpan = GetTextSpanFromCodeSite(sampleClassCode, refactoringSite);
+
+            TestAssertingEndText(sampleClassCode, refactoringSiteTextSpan, assertion, refactoringNumber);
+        }
+
+        public static void TestAssertingEndText(
+                                  string sampleClassCode,
+                                  TextSpan refactoringSiteTextSpan,
+                                  Action<string> assertion,
+                                  int refactoringNumber = 0)
+        {
             TestAsertingRefactorings(
                 sampleClassCode,
-                refactoringSite,
+                refactoringSiteTextSpan,
                 (workspace, document, proposedCodeRefactorings) =>
                 {
                     CodeAction refactoring = proposedCodeRefactorings.Single();
@@ -64,30 +75,39 @@ namespace DiConstructorGenerator.Test
                 refactoringNumber);
         }
         
+        public static void TestAssertingEndText(
+                                string testClassFileContents,
+                                string testClassExpectedNewContents)
+        {
+            TextSpan refactoringSiteSpan = GetTextSpanFromCommentMarker(testClassFileContents);
+
+            TestAssertingEndText(
+                testClassFileContents,
+                refactoringSiteSpan,
+                actuallText => Assert.AreEqual(testClassExpectedNewContents, actuallText));
+        }
+
         public static void TestAsertingRefactorings(
-                                    string sampleClassCode, 
-                                    string refactoringSite,
-                                    Action<AdhocWorkspace, 
-                                            Document, 
-                                            IEnumerable<CodeAction>> assert)
-        {          
-            (AdhocWorkspace workspace, Document classDocument) 
+                                  string sampleClassCode,
+                                  TextSpan refactroingSiteSpan,
+                                  Action<AdhocWorkspace,
+                                          Document,
+                                          IEnumerable<CodeAction>> assert)
+        {
+            (AdhocWorkspace workspace, Document classDocument)
                 = CreateAdHocLibraryProjectWorkspace(sampleClassCode);
 
-            TextSpan refactroingSiteSpan = 
-                GetTextSpanFromCodeSite(sampleClassCode, refactoringSite);
-
             var refactoringsProposed = new List<CodeAction>();
-            Action<CodeAction> proposeRefactoring = 
+            Action<CodeAction> proposeRefactoring =
                 (x) => refactoringsProposed.Add(x);
 
             var context = new CodeRefactoringContext(
-                                            classDocument, 
-                                            refactroingSiteSpan, 
-                                            proposeRefactoring, 
+                                            classDocument,
+                                            refactroingSiteSpan,
+                                            proposeRefactoring,
                                             CancellationToken.None);
 
-            var refacctoringProviderUnderTest = 
+            var refacctoringProviderUnderTest =
                         new DiConstructorGeneratorExtensionCodeRefactoringProvider();
 
             refacctoringProviderUnderTest
@@ -142,5 +162,26 @@ namespace DiConstructorGenerator.Test
             return new TextSpan(start, length);
 
         }
+
+        private static TextSpan GetTextSpanFromCommentMarker(string code)
+        {
+            var start = code.IndexOf("/*START*/");
+            var end = code.IndexOf("/*END*/");
+
+            if (start < 0 || end < 0)
+            {
+                throw new ArgumentException(
+                    $"Refactoring site marked with /*START*/ or /*END*/ " +
+                    $"not found in code \"{code}\"");
+            }
+
+            start += 9;
+
+            var length = end - start;
+
+            return new TextSpan(start, length);
+        }
+
+
     }
 }
