@@ -3,7 +3,7 @@
   <Metadata>
     <Identity Id="DiConstructorGeneratorExtension..ff7f9a37-eccc-432b-9d10-debc302ab7f7" Version="1.1" Language="en-US" Publisher="Me"/>
     <DisplayName>DiConstructorGeneratorExtension</DisplayName>
-    <Description xml:space="preserve">This is a sample code refactoring extension for the .NET Compiler Platform ("Roslyn").</Description>
+    <Description xml:space="preserve">Roslyn refactoring that allows you to regenerate dependency injected constuctors to add missing dependencies injection in one click.R</Description>
   </Metadata>
   <Installation>
     <InstallationTarget Version="[14.0,]" Id="Microsoft.VisualStudio.Pro" />

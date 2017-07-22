@@ -2,15 +2,15 @@
 <package >
   <metadata>
     <id>DiConstructorGeneratorExtension.Attributes</id>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <title>$title$</title>
     <authors>github.com/ikoshelev</authors>
     <owners>github.com/ikoshelev</owners>
     <licenseUrl>https://opensource.org/licenses/MIT</licenseUrl>
-    <projectUrl>https://marketplace.visualstudio.com/vsgallery/b5758365-06a3-4168-8eb8-253731800b52</projectUrl>
+    <projectUrl>https://github.com/IKoshelev/DiConstructorGeneratorExtension</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>
-		DiConstructorGeneratorExtension for Visual Studio companion library. Containins marker attributes to include\exclude class members to be used with extesnion.</description>
+		DiConstructorGeneratorExtension for Visual Studio companion library. Containins marker attributes to include\exclude class members to be used with extesnion. The extension itself is available at https://marketplace.visualstudio.com/items?itemName=Koshelew.DiConstructorGeneratorExtension</description>
     <releaseNotes>Initial release</releaseNotes>
     <copyright>Copyright 2017</copyright>
     <tags>
