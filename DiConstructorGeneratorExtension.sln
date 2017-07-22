@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiConstructorGeneratorExten
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiConstructorGeneratorExtension.Test", "DiConstructorGenerator.Test\DiConstructorGeneratorExtension.Test.csproj", "{DDB0F802-49BF-4275-A081-DFEFB7633CF3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiConstructorGeneratorExtension.Attributes", "DiConstructorGeneratorExtension.Attributes\DiConstructorGeneratorExtension.Attributes\DiConstructorGeneratorExtension.Attributes.csproj", "{FE305701-2F71-475E-8363-B39137580D62}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{DDB0F802-49BF-4275-A081-DFEFB7633CF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DDB0F802-49BF-4275-A081-DFEFB7633CF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DDB0F802-49BF-4275-A081-DFEFB7633CF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE305701-2F71-475E-8363-B39137580D62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE305701-2F71-475E-8363-B39137580D62}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE305701-2F71-475E-8363-B39137580D62}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE305701-2F71-475E-8363-B39137580D62}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

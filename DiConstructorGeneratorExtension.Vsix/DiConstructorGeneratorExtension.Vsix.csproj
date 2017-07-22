@@ -73,6 +73,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\DiConstructorGeneratorExtension.Attributes\DiConstructorGeneratorExtension.Attributes\DiConstructorGeneratorExtension.Attributes.csproj">
+      <Project>{fe305701-2f71-475e-8363-b39137580d62}</Project>
+      <Name>DiConstructorGeneratorExtension.Attributes</Name>
+    </ProjectReference>
     <ProjectReference Include="..\DiConstructorGeneratorExtension\DiConstructorGeneratorExtension.csproj">
       <Project>{AF041FBC-90C7-42DB-888F-9D3AE0BBDACC}</Project>
       <Name>DiConstructorGeneratorExtension</Name>

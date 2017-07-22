@@ -11,7 +11,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Text;
 using System;
-using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory; 
+using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using DiConstructorGeneratorExtension.Attributes;
 
 namespace DiConstructorGeneratorExtension
 {

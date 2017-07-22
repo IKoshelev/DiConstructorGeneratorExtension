@@ -1,4 +1,5 @@
 ﻿using DiConstructorGeneratorExtension;
+using DiConstructorGeneratorExtension.Attributes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeRefactorings;
