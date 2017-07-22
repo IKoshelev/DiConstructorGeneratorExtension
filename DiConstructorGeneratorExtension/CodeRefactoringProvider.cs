@@ -30,16 +30,21 @@ namespace DiConstructorGeneratorExtension
             // Find the node at the selection.
             var node = root.FindNode(context.Span);
 
+            ClassDeclarationSyntax classDecl = null;
+            ConstructorDeclarationSyntax constructorDecl = null;
             // Only offer a refactoring if the selected node is a class declaration node.
-            var typeDecl = node as ClassDeclarationSyntax;
-            if (typeDecl == null)
+            switch (node)
             {
-                return;
-            }
-
-            // For any type declaration node, create a code action to reverse the identifier text.
-            var action = CodeAction.Create("(Re)Generate dependency injected constructor", 
-                c => RegenerateDependencyInjectedConstructor(context.Document, typeDecl, c));
+                case ClassDeclarationSyntax @class:
+                    classDecl = @class;
+                    break;
+                default:
+                    return;
+                    break;
+            } 
+                
+            var action = CodeAction.Create("(Re)Generate dependency injected constructor",
+                cancelToken => RegenerateDependencyInjectedConstructor(context.Document, classDecl, cancelToken));
 
             // Register this code action.
             context.RegisterRefactoring(action);
@@ -125,7 +130,7 @@ namespace DiConstructorGeneratorExtension
             else if (count == 0)
             {
                 (document, root, @class, constructor) =
-                    GetTpeDeclarationWithEmptyConstructor(document, root, @class);
+                    GetTypeDeclarationWithEmptyConstructor(document, root, @class, injectables);
                 return true;
             }
             else
@@ -169,9 +174,10 @@ namespace DiConstructorGeneratorExtension
                 SyntaxNode root, 
                 ClassDeclarationSyntax @class, 
                 ConstructorDeclarationSyntax constructor) 
-            GetTpeDeclarationWithEmptyConstructor(Document document,
+            GetTypeDeclarationWithEmptyConstructor(Document document,
                                                 SyntaxNode root,
-                                                ClassDeclarationSyntax @class)
+                                                ClassDeclarationSyntax @class,
+                                                MemberDeclarationSyntax[] injectables)
         {
             var classsName = @class.Identifier.Text;
 
@@ -184,11 +190,22 @@ namespace DiConstructorGeneratorExtension
                                 SF.TriviaList(SF.Space))))
                         .WithBody(SF.Block());
 
-            var newClass = @class.AddMembers(newConstructor);
+            var members = @class.Members;
+            var lastInjectableIndex = @class.Members.IndexOf(injectables.Last());
+
+            var lastInjectableIsLastMember = lastInjectableIndex == @class.Members.Count();
+            ClassDeclarationSyntax newClass;
+            if (lastInjectableIsLastMember)
+            {
+                newClass = @class.AddMembers(newConstructor);
+            } else
+            {
+                var newMmebers = members.Insert(lastInjectableIndex + 1, newConstructor);
+                newClass = @class.WithMembers(newMmebers);
+            }
+           
             var newDocumentRoot = root.ReplaceNode(@class, newClass);
             var newDocument = document.WithSyntaxRoot(newDocumentRoot);
-
-            //newConstructor = GetConstructors(newClass).Single();
 
             return (newDocument, newDocumentRoot, newClass, newConstructor);
         }
@@ -330,7 +347,17 @@ namespace DiConstructorGeneratorExtension
                                                                                 existingAssignments,
                                                                                 constructor);
 
-            var separatedParameters = SF.SeparatedList(updatedParamters);
+            SyntaxTrivia newLine = SF.SyntaxTrivia(SyntaxKind.EndOfLineTrivia, "\r\n");
+            SyntaxToken comaWithNewLine = SF.Token(
+                                                    SF.TriviaList(),
+                                                    SyntaxKind.CommaToken,
+                                                    SF.TriviaList(newLine));
+            SyntaxToken[] comasList = Enumerable
+                                            .Range(0, updatedParamters.Length - 1)
+                                            .Select(x => comaWithNewLine)
+                                            .ToArray();
+
+            var separatedParameters = SF.SeparatedList(updatedParamters, comasList);
 
             constructor = constructor.WithParameterList(SF.ParameterList(separatedParameters));
 
