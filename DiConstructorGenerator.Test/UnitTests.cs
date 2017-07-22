@@ -420,5 +420,53 @@ public class FooBar
                             "FooBar",
                             testClassExpectedNewContents);
         }
+
+        [TestMethod]
+        public void CanHandleGenericClasses()
+        {
+            var testClassFileContents = @"
+using System;
+
+public class FooBar
+{
+    private readonly IFoo<IFoo<Interface2>> injectMe;
+
+    public FooBar(int a)
+    {
+    }
+
+    public interface Interface2 { }
+
+    public interface IFoo<T>
+    {
+        T Ignore { get; set; }
+    }
+}";
+
+            var testClassExpectedNewContents = @"
+using System;
+
+public class FooBar
+{
+    private readonly IFoo<IFoo<Interface2>> injectMe;
+
+    public FooBar(int a, IFoo<IFoo<Interface2>> _injectMe)
+    {
+        injectMe = _injectMe;
+    }
+
+    public interface Interface2 { }
+
+    public interface IFoo<T>
+    {
+        T Ignore { get; set; }
+    }
+}";
+
+            TestUtil.TestAssertingEndText(
+                            testClassFileContents,
+                            "FooBar",
+                            testClassExpectedNewContents);
+        }
     }
 }

@@ -377,8 +377,8 @@ namespace DiConstructorGeneratorExtension
         {
             return injectablesMissingAnAssignment.Select(injectable =>
             {
-                var injectableTypeIdentifier = (IdentifierNameSyntax)injectable.GetMemberType();
-                var injectableType = injectableTypeIdentifier.Identifier.Text;
+                var injectableTypeIdentifier = injectable.GetMemberType();
+                var injectableType = injectableTypeIdentifier.GetTypeName();
                 var injectableName = injectable.GetMemberIdentifier().Text;
 
                 var correspondingParameter = updatedParamters

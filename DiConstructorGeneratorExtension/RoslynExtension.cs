@@ -106,6 +106,9 @@ namespace DiConstructorGeneratorExtension
                 case IdentifierNameSyntax name:
                     return name.Identifier.Text;
                     break;
+                case GenericNameSyntax generic:
+                    return generic.GetText().ToString().Trim();
+                    break;
                 default:
                     throw new ArgumentException($"Unknown TypeSyntax node type : {member.Kind().ToString()}");
             }
