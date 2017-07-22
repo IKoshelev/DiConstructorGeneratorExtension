@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>DiConstructorGeneratorExtension.Attributes</id>
+    <version>1.0.0</version>
+    <title>$title$</title>
+    <authors>github.com/ikoshelev</authors>
+    <owners>github.com/ikoshelev</owners>
+    <licenseUrl>https://opensource.org/licenses/MIT</licenseUrl>
+    <projectUrl>https://marketplace.visualstudio.com/vsgallery/b5758365-06a3-4168-8eb8-253731800b52</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>
+		DiConstructorGeneratorExtension for Visual Studio companion library. Containins marker attributes to include\exclude class members to be used with extesnion.</description>
+    <releaseNotes>Initial release</releaseNotes>
+    <copyright>Copyright 2017</copyright>
+    <tags>
+		Dependency injection, constructor generation, Roslyn refactoring
+	</tags>
+  </metadata>
+</package>
