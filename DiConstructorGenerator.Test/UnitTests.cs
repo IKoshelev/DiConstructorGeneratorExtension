@@ -128,8 +128,8 @@ public class FooBar
 {
     public readonly FooBar _p1;
     public FooBar(
-int a,
-FooBar p1)
+                 int a,
+                 FooBar p1)
     {
         _p1 = p1;
     }
@@ -164,9 +164,9 @@ public class FooBar
     public readonly FooBar _p1;
     public readonly Baz _p2;
     public FooBar(
-int a,
-FooBar p1,
-Baz p2)
+                 int a,
+                 FooBar p1,
+                 Baz p2)
     {
         _p1 = p1;
         _p2 = p2;
@@ -205,9 +205,9 @@ public class FooBar
     public readonly FooBar _p1;
     public readonly Baz _p2;
     public FooBar(
-int a,
-FooBar existing,
-Baz p2)
+                 int a,
+                 FooBar existing,
+                 Baz p2)
     {
         _p2 = p2;
         //i'm a comment!
@@ -251,9 +251,9 @@ public class FooBar
     [InjectedDependency]
     public Baz _p2 {get;set;}
     public FooBar(
-int a,
-FooBar p1,
-Baz p2)
+                 int a,
+                 FooBar p1,
+                 Baz p2)
     {
         _p1 = p1;
         _p2 = p2;
@@ -294,8 +294,8 @@ public class FooBar
     [ExcludeFromInjectedDependencies]
     public readonly Baz _p2;
     public FooBar(
-int a,
-FooBar p1)
+                 int a,
+                 FooBar p1)
     {
         _p1 = p1;
     }
@@ -332,8 +332,8 @@ public class FooBar
     public readonly FooBar _p1;
     public readonly Baz _p2;
     public FooBar(
-int a,
-FooBar p1)
+                 int a,
+                 FooBar p1)
     {
         _p1 = p1;
         _p2 = new Baz();
@@ -430,8 +430,8 @@ public class FooBar
     public FooBar(){}
     [DependencyInjectionConstructor]
     public FooBar(
-int a,
-FooBar _injectMe) : this()
+                 int a,
+                 FooBar _injectMe) : this()
     {
         injectMe = _injectMe;
     }
@@ -473,8 +473,8 @@ public class FooBar
     private readonly IFoo<IFoo<Interface2>> injectMe;
 
     public FooBar(
-int a,
-IFoo<IFoo<Interface2>> _injectMe)
+                 int a,
+                 IFoo<IFoo<Interface2>> _injectMe)
     {
         injectMe = _injectMe;
     }
@@ -516,8 +516,8 @@ public class FooBar
     private readonly FooBar injectMe;
     public FooBar(){}
     public /*START*/FooBar/*END*/ (
-int a,
-FooBar _injectMe) : this()
+                                  int a,
+                                  FooBar _injectMe) : this()
     {
         injectMe = _injectMe;
     }

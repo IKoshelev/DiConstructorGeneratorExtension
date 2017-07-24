@@ -325,8 +325,11 @@ namespace DiConstructorGeneratorExtension
         private static ParameterSyntax[] GetParametersListWithMissingInjectablesAdded(
                                                         MemberDeclarationSyntax[] injectables,
                                                         string[] existingConstructorAssignments,
-                                                        ConstructorDeclarationSyntax constructor)
+                                                        ConstructorDeclarationSyntax constructor,
+                                                        int indentationLength)
         {
+            var indentationStr = new String(' ', indentationLength);
+
             Dictionary<TypeSyntax, MemberDeclarationSyntax> missingInjectablesByTypeIdentifier =
                 injectables
                     .Where(x => existingConstructorAssignments.Contains(x.GetMemberName()) == false)
@@ -351,6 +354,20 @@ namespace DiConstructorGeneratorExtension
                      .Where(x => preexistingParameterTypeNames.Contains(x.GetTypeName()) == false)
                      .ToArray();
 
+            var onlyOneParameterExpected = 
+                (preexistingParameters.Count() + missingParametersByType.Count()) == 1;
+
+            if (onlyOneParameterExpected)
+            {
+                indentationStr = "";
+            }
+
+            var identation = SF.Whitespace(indentationStr);
+
+            preexistingParameters = preexistingParameters
+                                        .Select(x => x.WithLeadingTrivia(identation))
+                                        .ToArray();
+
             var newParamters = missingParametersByType
                 .Select(x =>
                 {
@@ -367,11 +384,12 @@ namespace DiConstructorGeneratorExtension
                         paramIdentifierName = "_" + paramIdentifierName;
                     }
                     var parameterIdentifierSyntax = SF.Identifier(paramIdentifierName);
-
+                
                     return SF.Parameter(
                              SF.List<AttributeListSyntax>(),
                              SF.TokenList(),
-                             SF.ParseTypeName(x.GetText().ToString()),
+                             SF.ParseTypeName(x.GetText().ToString())
+                                        .WithLeadingTrivia(identation),
                              parameterIdentifierSyntax,
                              null);
                 })
@@ -390,11 +408,13 @@ namespace DiConstructorGeneratorExtension
                                                         ConstructorDeclarationSyntax constructor)
         {
             string[] existingAssignments = GetExistingAssignmentsInConstructor(constructor);
+            int indentationLength = GetParameterIndentation(constructor);
 
             var updatedParamters = GetParametersListWithMissingInjectablesAdded(
                                                                                 injectables,
                                                                                 existingAssignments,
-                                                                                constructor);
+                                                                                constructor,
+                                                                                indentationLength);
 
             SyntaxTrivia newLine = SF.SyntaxTrivia(SyntaxKind.EndOfLineTrivia, "\r\n");
             SyntaxToken comaWithNewLine = SF.Token(
@@ -428,10 +448,10 @@ namespace DiConstructorGeneratorExtension
                 return existingAssignments.Contains(name) == false;
             });
 
-            IEnumerable<StatementSyntax> newBodyStatements = 
+            IEnumerable<StatementSyntax> newBodyStatements =
                 GetBodyStatementsWithMissinggAssignmentsPrepended(
-                                                            constructor, 
-                                                            updatedParamters, 
+                                                            constructor,
+                                                            updatedParamters,
                                                             injectablesMissingAnAssignment);
 
             var newBodySyntaxList = SF.List(newBodyStatements);
@@ -441,6 +461,21 @@ namespace DiConstructorGeneratorExtension
             constructor = constructor.WithBody(newBody);
 
             return constructor;
+        }
+
+        private static int GetParameterIndentation(ConstructorDeclarationSyntax constructor)
+        {
+            var text = constructor.GetText().ToString();
+            var parenIndex = text.IndexOf("(");
+            var stringUpToParen = text.Substring(0, parenIndex);
+            var lastNewLineIndex = stringUpToParen.LastIndexOfAny(new char[] { '\r', '\n' });
+            if(lastNewLineIndex == -1)
+            {
+                return stringUpToParen.Length;
+            } else
+            {
+                return stringUpToParen.Length - lastNewLineIndex - 1;
+            }
         }
 
         private static IEnumerable<StatementSyntax> GetBodyStatementsWithMissinggAssignmentsPrepended(
