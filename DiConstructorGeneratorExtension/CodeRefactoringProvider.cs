@@ -408,9 +408,19 @@ namespace DiConstructorGeneratorExtension
 
             var separatedParameters = SF.SeparatedList(updatedParamters, comasList);
 
-            constructor = constructor.WithParameterList(SF.ParameterList(separatedParameters));
+            var parameterList = SF.ParameterList(separatedParameters);
 
-            
+            if (updatedParamters.Count() > 1)
+            {
+                var openParenWithNewline = SF.Token(
+                                                SF.TriviaList(),
+                                                SyntaxKind.OpenParenToken,
+                                                SF.TriviaList(newLine));
+
+                parameterList = parameterList.WithOpenParenToken(openParenWithNewline);
+            }
+
+            constructor = constructor.WithParameterList(parameterList);
 
             var injectablesMissingAnAssignment = injectables.Where(x =>
             {
