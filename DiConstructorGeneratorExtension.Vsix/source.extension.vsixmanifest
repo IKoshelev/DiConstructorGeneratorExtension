@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="DiConstructorGeneratorExtension..ff7f9a37-eccc-432b-9d10-debc302ab7f7" Version="1.2" Language="en-US" Publisher="Me"/>
+    <Identity Id="DiConstructorGeneratorExtension..ff7f9a37-eccc-432b-9d10-debc302ab7f7" Version="1.3" Language="en-US" Publisher="Me"/>
     <DisplayName>DiConstructorGeneratorExtension</DisplayName>
     <Description xml:space="preserve">Roslyn refactoring that allows you to regenerate dependency injected constuctors to add missing dependencies injection in one click.</Description>
   </Metadata>

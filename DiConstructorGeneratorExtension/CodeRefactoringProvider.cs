@@ -102,7 +102,7 @@ namespace DiConstructorGeneratorExtension
             injectables = GetInjectableMembers(@class);
             if (injectables.Any() == false)
             {
-                var errorMessage = "Can't regenerate constructor, no candidate members found " +
+                var errorMessage = "Can't regenerate constructor, no unassgined candidate members found " +
                                     $"(readonly fields, properties markead with {nameof(InjectedDependencyAttribute)}).";
                 document = NotifyErrorViaCommentToClassOrConstructor(document, root, @class, constructor, errorMessage);
                 return false;
@@ -297,6 +297,14 @@ namespace DiConstructorGeneratorExtension
                     .Cast<MemberDeclarationSyntax>()
                     .Where(x =>
                     {
+                        bool alreadyHasAssignments = x.DescendantNodes()
+                                            .Any(n => n.Fits(SyntaxKind.EqualsValueClause));
+
+                        if (alreadyHasAssignments)
+                        {
+                            return false;
+                        }
+
                         bool isReadonlyField = x.DescendantTokens()
                                             .Any(n => n.Fits(SyntaxKind.ReadOnlyKeyword));
 

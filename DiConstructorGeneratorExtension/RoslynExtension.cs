@@ -98,20 +98,23 @@ namespace DiConstructorGeneratorExtension
 
         public static string GetTypeName(this TypeSyntax member)
         {
-            switch (member)
-            {
-                case PredefinedTypeSyntax predefined:
-                    return predefined.Keyword.Text;
-                    break;
-                case IdentifierNameSyntax name:
-                    return name.Identifier.Text;
-                    break;
-                case GenericNameSyntax generic:
-                    return generic.GetText().ToString().Trim();
-                    break;
-                default:
-                    throw new ArgumentException($"Unknown TypeSyntax node type : {member.Kind().ToString()}");
-            }
+            return member.GetText().ToString().Trim();
+
+            //switch (member)
+            //{
+            //    case PredefinedTypeSyntax predefined:
+            //        return predefined.Keyword.Text;
+            //        break;
+            //    case IdentifierNameSyntax name:
+            //        return name.Identifier.Text;
+            //        break;
+            //    case GenericNameSyntax generic:
+            //        return generic.GetText().ToString().Trim();
+            //        break;
+            //    todo add array handling
+            //    default:
+            //        throw new ArgumentException($"Unknown TypeSyntax node type : {member.Kind().ToString()}");
+            //}
         }
     }
 }

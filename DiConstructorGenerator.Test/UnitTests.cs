@@ -38,7 +38,7 @@ public class FooBar
 using System;
 
 public class FooBar
-{//Can't regenerate constructor, no candidate members found (readonly fields, properties markead with InjectedDependencyAttribute).
+{//Can't regenerate constructor, no unassgined candidate members found (readonly fields, properties markead with InjectedDependencyAttribute).
 }";
 
             TestUtil.TestAssertingEndText(
@@ -98,6 +98,37 @@ public class FooBar
     public FooBar(FooBar p1)
     {
         _p1 = p1;
+    }
+}";
+
+            TestUtil.TestAssertingEndText(
+                            testClassFileContents,
+                            "FooBar",
+                            testClassExpectedNewContents);
+        }
+
+        [TestMethod]
+        public void DoesNotAddAssignmentsToMembersAlreadyInitialised()
+        {
+            var testClassFileContents = @"
+using System;
+public class FooBar
+{
+    public readonly FooBar _p1 = null;
+    public FooBar()
+    {
+        
+    }
+}";
+
+            var testClassExpectedNewContents = @"
+using System;
+public class FooBar
+{//Can't regenerate constructor, no unassgined candidate members found (readonly fields, properties markead with InjectedDependencyAttribute).
+    public readonly FooBar _p1 = null;
+    public FooBar()
+    {
+        
     }
 }";
 
@@ -477,6 +508,58 @@ public class FooBar
                  IFoo<IFoo<Interface2>> _injectMe)
     {
         injectMe = _injectMe;
+    }
+
+    public interface Interface2 { }
+
+    public interface IFoo<T>
+    {
+        T Ignore { get; set; }
+    }
+}";
+
+            TestUtil.TestAssertingEndText(
+                            testClassFileContents,
+                            "FooBar",
+                            testClassExpectedNewContents);
+        }
+
+        [TestMethod]
+        public void CanHandleArray()
+        {
+            var testClassFileContents = @"
+using System;
+
+public class FooBar
+{
+    private readonly Interface2[] _p1;
+    private readonly Interface2[,] _p1;
+    public FooBar(int a)
+    {
+    }
+
+    public interface Interface2 { }
+
+    public interface IFoo<T>
+    {
+        T Ignore { get; set; }
+    }
+}";
+
+            var testClassExpectedNewContents = @"
+using System;
+
+public class FooBar
+{
+    private readonly Interface2[] _p1;
+    private readonly Interface2[,] _p1;
+    public FooBar(
+                 int a,
+                 Interface2[] p1,
+                 Interface2[,] p1)
+    {
+        _p1 = p1;
+        _p1 = p1;
     }
 
     public interface Interface2 { }
