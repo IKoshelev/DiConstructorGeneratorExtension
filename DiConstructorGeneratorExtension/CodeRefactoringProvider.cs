@@ -52,12 +52,10 @@ namespace DiConstructorGeneratorExtension
         private async Task<Document> RegenerateDependencyInjectedConstructor(
                                     Document document, 
                                     ClassDeclarationSyntax @class,
-                                    ConstructorDeclarationSyntax constrDecl,
+                                    ConstructorDeclarationSyntax constructor,
                                     CancellationToken cancellationToken)
         {
             var root = await document.GetSyntaxRootAsync(cancellationToken);
-
-            var constructor = constrDecl;
 
             var hasAllNeededParts = TryGetOrAddRequiredParts(
                                         ref document,
@@ -142,7 +140,7 @@ namespace DiConstructorGeneratorExtension
                 return true;
             }
         }
-
+       
         private static ConstructorDeclarationSyntax[] GetPublicEligableConstructors(ClassDeclarationSyntax @class)
         {
             var publicConstructors = @class.ChildNodes()
