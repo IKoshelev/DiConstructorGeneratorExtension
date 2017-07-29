@@ -8,8 +8,6 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Rename;
-using Microsoft.CodeAnalysis.Text;
 using System;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using DiConstructorGeneratorExtension.Attributes;
@@ -74,9 +72,7 @@ namespace DiConstructorGeneratorExtension
             }
 
             var newConstructor = RegenereateConstructorSyntax(injectables, constructor);
-
-            var newClass = @class.ReplaceNode(constructor, newConstructor);
-            var newDocumentRoot = root.ReplaceNode(@class, newClass);
+            var newDocumentRoot = root.ReplaceNode(constructor, newConstructor);
             document = document.WithSyntaxRoot(newDocumentRoot);
             return document;
         }
@@ -167,12 +163,12 @@ namespace DiConstructorGeneratorExtension
             if (marked.Any())
             {
                 return marked
-                    .Cast<ConstructorDeclarationSyntax>()
+                    .OfType<ConstructorDeclarationSyntax>()
                     .ToArray();
             }
 
             return publicConstructors
-                        .Cast<ConstructorDeclarationSyntax>()
+                        .OfType<ConstructorDeclarationSyntax>()
                         .ToArray();
         }
 
@@ -291,7 +287,7 @@ namespace DiConstructorGeneratorExtension
                 @type
                     .ChildNodes()
                     .Where(x => x.Fits(propOrFieldDeclaration))
-                    .Cast<MemberDeclarationSyntax>()
+                    .OfType<MemberDeclarationSyntax>()
                     .Where(x =>
                     {
                         bool alreadyHasAssignments = x.DescendantNodes()
@@ -345,7 +341,7 @@ namespace DiConstructorGeneratorExtension
             var preexistingParameters =
                 constructor.ParameterList
                            .ChildNodes()
-                           .Cast<ParameterSyntax>()
+                           .OfType<ParameterSyntax>()
                            .ToArray();
 
             var preexistingParameterTypeNames =
@@ -539,16 +535,15 @@ namespace DiConstructorGeneratorExtension
             return constructor
                  .Body
                  .ChildNodes()
-                 .Where(n => n.Fits(SyntaxKind.ExpressionStatement))
-                 .Cast<ExpressionStatementSyntax>()
+                 .OfType<ExpressionStatementSyntax>()
                  .Select(x => x.DescendantNodes()
                                 .Where(y => y
                                             .Fits(SyntaxKind.SimpleAssignmentExpression))
                                             .SingleOrDefault())
                  .Where(x => x != null)
-                 .Cast<AssignmentExpressionSyntax>()
-                 .Where(x => x.Left.Fits(SyntaxKind.IdentifierName))
-                 .Select(x => (IdentifierNameSyntax)x.Left)
+                 .OfType<AssignmentExpressionSyntax>()
+                 .Select(x => x.Left)
+                 .OfType<IdentifierNameSyntax>()
                  .Select(x => x.Identifier.Text)
                  .ToArray();
         }
