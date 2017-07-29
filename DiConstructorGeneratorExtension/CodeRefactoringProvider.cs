@@ -315,7 +315,6 @@ namespace DiConstructorGeneratorExtension
                         return isReadonlyField || hasDependencyAttr;
 
                     })
-                    .Where(x => true)
                     .ToArray();
 
             return injectableMembers;
