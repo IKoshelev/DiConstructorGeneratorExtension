@@ -21,8 +21,6 @@ namespace DiConstructorGeneratorExtension
     {
         public sealed override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
-            // TODO: Replace the following code with your own analysis, generating a CodeAction for each refactoring to offer
-
             var root = await context.Document
                 .GetSyntaxRootAsync(context.CancellationToken)
                 .ConfigureAwait(false);
@@ -32,7 +30,6 @@ namespace DiConstructorGeneratorExtension
 
             ClassDeclarationSyntax classDecl = null;
             ConstructorDeclarationSyntax constructorDecl = null;
-            // Only offer a refactoring if the selected node is a class declaration node.
             switch (node)
             {
                 case ClassDeclarationSyntax @class:
@@ -51,19 +48,16 @@ namespace DiConstructorGeneratorExtension
             var action = CodeAction.Create("(Re)Generate dependency injected constructor",
                 cancelToken => RegenerateDependencyInjectedConstructor(context.Document, classDecl, constructorDecl, cancelToken));
 
-            // Register this code action.
             context.RegisterRefactoring(action);
         }
 
         private async Task<Document> RegenerateDependencyInjectedConstructor(
                                     Document document, 
-                                    ClassDeclarationSyntax classDecl,
+                                    ClassDeclarationSyntax @class,
                                     ConstructorDeclarationSyntax constrDecl,
                                     CancellationToken cancellationToken)
         {
             var root = await document.GetSyntaxRootAsync(cancellationToken);
-
-            var @class = root.GetMatchingClassDeclaration(classDecl);
 
             var constructor = constrDecl;
 
@@ -81,9 +75,7 @@ namespace DiConstructorGeneratorExtension
 
             var newConstructor = RegenereateConstructorSyntax(injectables, constructor);
 
-            var constructorToReplace = constrDecl ?? GetPublicEligableConstructors(@class).Single();
-            var newClass = @class.ReplaceNode(constructorToReplace, newConstructor);
-            @class = root.GetMatchingClassDeclaration(classDecl);
+            var newClass = @class.ReplaceNode(constructor, newConstructor);
             var newDocumentRoot = root.ReplaceNode(@class, newClass);
             document = document.WithSyntaxRoot(newDocumentRoot);
             return document;
@@ -213,14 +205,19 @@ namespace DiConstructorGeneratorExtension
             if (lastInjectableIsLastMember)
             {
                 newClass = @class.AddMembers(newConstructor);
-            } else
+            }
+            else
             {
                 var newMmebers = members.Insert(lastInjectableIndex + 1, newConstructor);
                 newClass = @class.WithMembers(newMmebers);
             }
-           
+
             var newDocumentRoot = root.ReplaceNode(@class, newClass);
             var newDocument = document.WithSyntaxRoot(newDocumentRoot);
+
+            newDocumentRoot = newDocument.GetSyntaxRootAsync().Result;
+            newClass = newDocumentRoot.GetMatchingClassDeclaration(newClass);
+            newConstructor = GetPublicEligableConstructors(newClass).Single();
 
             return (newDocument, newDocumentRoot, newClass, newConstructor);
         }
