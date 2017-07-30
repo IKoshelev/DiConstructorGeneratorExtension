@@ -136,7 +136,7 @@ namespace DiConstructorGeneratorExtension
             }
             else
             {
-                constructor = publicConstructors.FirstOrDefault();
+                constructor = publicConstructors.Single();
                 return true;
             }
         }
